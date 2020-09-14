@@ -1,14 +1,96 @@
 plugins {
-    id 'java'
+	id 'org.springframework.boot' version '2.3.3.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.10.RELEASE'
+	id 'idea'
+	id 'java'
+	id 'war'
 }
 
-group 'ua.com.shami'
-version '1.0-SNAPSHOT'
+group = 'ua.com.shami'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+sourceSets.main.java.srcDir new File(buildDir, 'generated-sources/jaxb')
+idea {
+	module {
+		generatedSourceDirs += file('build/generated-sources/jaxb')
+	}
+}
+
+
+task genJaxb {
+	ext.sourcesDir = "${buildDir}/generated-sources/jaxb"
+	ext.classesDir = "${buildDir}/classes/jaxb"
+	ext.schema = "src/main/resources/currencies.xsd"
+
+	outputs.dir classesDir
+
+	doLast() {
+		project.ant {
+			taskdef name: "xjc", classname: "com.sun.tools.xjc.XJCTask",
+					classpath: configurations.jaxb.asPath
+			mkdir(dir: sourcesDir)
+			mkdir(dir: classesDir)
+
+			xjc(destdir: sourcesDir, schema: schema) {
+				arg(value: "-wsdl")
+				produces(dir: sourcesDir, includes: "**/*.java")
+			}
+
+			javac(destdir: classesDir, source: 1.6, target: 1.6, debug: true,
+					debugLevel: "lines,vars,source", includeantruntime: false,
+					classpath: configurations.jaxb.asPath) {
+				src(path: sourcesDir)
+				include(name: "**/*.java")
+				include(name: "*.java")
+			}
+
+			copy(todir: classesDir) {
+				fileset(dir: sourcesDir, erroronmissingdir: false) {
+					exclude(name: "**/*.java")
+				}
+			}
+		}
+	}
+}
+// end::xsd[]
+
+configurations {
+	jaxb
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
 
 repositories {
-    mavenCentral()
+	mavenCentral()
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-web-services'
+	implementation 'wsdl4j:wsdl4j:1.6.1'
+	compile('javax.xml.bind:jaxb-api:2.3.0')
+	compile('javax.activation:activation:1.1')
+	compile group: 'org.springframework.ws', name: 'spring-ws-security', version: '3.0.9.RELEASE'
+	compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.11'
+	compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.0'
+	compile group: 'wsdl4j', name: 'wsdl4j', version: '1.6.3'
+	compile ('com.sun.xml.wss:xws-security:3.0') {
+		exclude group: 'javax.xml.crypto', module: 'xmldsig'
+	}
+	compile('org.glassfish.jaxb:jaxb-runtime:2.3.0')
+	jaxb("org.glassfish.jaxb:jaxb-xjc:2.3.0")
+	compile(files(genJaxb.classesDir).builtBy(genJaxb))
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}
+
+test {
+	useJUnitPlatform()
 }

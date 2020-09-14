@@ -1,0 +1,9 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:gs="http://localhost:8080/currencies">
+    <soapenv:Header/>
+    <soapenv:Body>
+        <gs:getCurrencyRate>
+            <gs:currencyCode>USD</gs:currencyCode>
+        </gs:getCurrencyRate>
+    </soapenv:Body>
+</soapenv:Envelope>
